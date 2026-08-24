@@ -1,0 +1,32 @@
+name: Publish SSQ update package
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - data/ssq-source.json
+      - tool/build_ssq_update_package.py
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    if: github.actor != 'github-actions[bot]' && hashFiles('data/ssq-source.json') != ''
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: >-
+          python tool/build_ssq_update_package.py data/ssq-source.json ssq-update.json
+          --primary-source https://www.cwl.gov.cn/ygkj/wqkjgg/ssq/
+          --verification-source https://www.zhcw.com/fcym/cz/ssqzj/
+      - run: |
+          if git diff --quiet -- ssq-update.json; then exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add ssq-update.json
+          git commit -m "data: publish reviewed ssq update package"
+          git push
